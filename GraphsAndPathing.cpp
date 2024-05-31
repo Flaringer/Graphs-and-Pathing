@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include <queue>
+#include <algorithm>
 #include <climits>
 
 using namespace std;
@@ -17,36 +18,9 @@ public:
     void addNeighbor(Attraction* neighbor, int time) {
         neighbors[neighbor] = time;
     }
+
+    ~Attraction() {} // Destructor to release memory
 };
-
-
-pair<vector<Attraction*>, int> findPathGreedy(Attraction* start, Attraction* end) {
-    vector<Attraction*> path;
-    int total_time = 0;
-
-    Attraction* current = start;
-
-    while (current != end) {
-        path.push_back(current);
-
-        Attraction* next = nullptr;
-        int shortest_time = INT_MAX;
-
-        for (auto& neighbor : current->neighbors) {
-            if (neighbor.second < shortest_time) {
-                next = neighbor.first;
-                shortest_time = neighbor.second;
-            }
-        }
-
-        total_time += shortest_time;
-        current = next;
-    }
-
-    path.push_back(end);
-
-    return {path, total_time};
-}
 
 
 pair<vector<Attraction*>, int> findShortestPathDijkstra(Attraction* start, Attraction* end) {
@@ -63,81 +37,34 @@ pair<vector<Attraction*>, int> findShortestPathDijkstra(Attraction* start, Attra
         parent[neighbor.first] = start;
     }
 
-    while (!pq.empty()) {
-        auto [time, current] = pq.top();
-        pq.pop();
+  while (!pq.empty()) {
+      pair<int, Attraction*> top_pair = pq.top();
+      int time = top_pair.first;
+      Attraction* current = top_pair.second;
+      pq.pop();
 
-        if (current == end) {
-            total_time = time;
-            while (current != start) {
-                path.push_back(current);
-                current = parent[current];
-            }
-            path.push_back(start);
-            reverse(path.begin(), path.end());
-            break;
-        }
+      if (current == end) {
+          total_time = time;
+          while (current != start) {
+              path.push_back(current);
+              current = parent[current];
+          }
+          path.push_back(start);
+          reverse(path.begin(), path.end());
+          break;
+      }
 
-        for (auto& neighbor : current->neighbors) {
-            int new_time = time + neighbor.second;
-            if (new_time < distance[neighbor.first]) {
-                distance[neighbor.first] = new_time;
-                pq.push({new_time, neighbor.first});
-                parent[neighbor.first] = current;
-            }
-        }
-    }
-
-    return {path, total_time};
-}
-
-
-pair<vector<Attraction*>, int> findPathAStar(Attraction* start, Attraction* end) {
-    vector<Attraction*> path;
-    int total_time = 0;
-
-    map<Attraction*, int> distance;
-    map<Attraction*, Attraction*> parent;
-    priority_queue<pair<int, Attraction*>, vector<pair<int, Attraction*>>, greater<pair<int, Attraction*>>> pq;
-
-    for (auto& neighbor : start->neighbors) {
-        distance[neighbor.first] = neighbor.second;
-        pq.push({neighbor.second, neighbor.first});
-        parent[neighbor.first] = start;
-    }
-
-    while (!pq.empty()) {
-        auto [time, current] = pq.top();
-        pq.pop();
-
-        if (current == end) {
-            total_time = time;
-            while (current != start) {
-                path.push_back(current);
-                current = parent[current];
-            }
-            path.push_back(start);
-            reverse(path.begin(), path.end());
-            break;
-        }
-
-        for (auto& neighbor : current->neighbors) {
-            int new_time = time + neighbor.second;
-            if (new_time < distance[neighbor.first]) {
-                distance[neighbor.first] = new_time;
-                int heuristic = new_time + /* heuristic calculation */;
-                pq.push({heuristic, neighbor.first});
-                parent[neighbor.first] = current;
-            }
-        }
-    }
+      for (auto& neighbor : current->neighbors) {
+          int new_time = time + neighbor.second;
+          if (new_time < distance[neighbor.first]) {
+              distance[neighbor.first] = new_time;
+              pq.push({new_time, neighbor.first});
+              parent[neighbor.first] = current;
+          }
+      }
+  }
 
     return {path, total_time};
-}
-
-
-vector<pair<Attraction*, Attraction*>> findMST(vector<Attraction*>& attractions) {
-
 }
 
 
@@ -168,6 +95,22 @@ vector<Attraction*> createAttractions(vector<vector<int>>& adjacency_matrix) {
 
 int main() {
     vector<Attraction*> attractions = createAttractions(map1);
+
+    // Testing shortest path
+    Attraction* start = attractions[0];
+    Attraction* end = attractions[4];
+    auto result = findShortestPathDijkstra(start, end);
+
+    cout << "Shortest path from " << start->name << " to " << end->name << ": ";
+    for (auto* attr : result.first) {
+        cout << attr->name << " -> ";
+    }
+    cout << "Total time: " << result.second << " minutes" << endl;
+
+    // Memory cleanup
+    for (auto* attr : attractions) {
+        delete attr;
+    }
 
     return 0;
 }
